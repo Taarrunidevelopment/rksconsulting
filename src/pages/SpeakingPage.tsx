@@ -9,6 +9,7 @@ export function SpeakingPage() {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [totalSlides, setTotalSlides] = useState(2);
 
   const featuredMedia = MEDIA_ITEMS.filter((item) => item.url);
 
@@ -18,17 +19,26 @@ export function SpeakingPage() {
     setCanScrollLeft(scrollLeft > 12);
     setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 12);
 
-    const cardStep = clientWidth >= 768 ? (clientWidth - 32) / 2 + 32 : clientWidth;
+    const isDesktop = clientWidth >= 768;
+    const visibleCards = isDesktop ? 2 : 1;
+    const slidesCount = Math.max(1, featuredMedia.length - visibleCards + 1);
+    setTotalSlides(slidesCount);
+
+    const cardStep = isDesktop ? (clientWidth - 32) / 2 + 32 : clientWidth;
     const index = Math.round(scrollLeft / cardStep);
-    setActiveSlide(Math.min(index, featuredMedia.length - 1));
+    setActiveSlide(Math.min(Math.max(0, index), slidesCount - 1));
   };
 
   useEffect(() => {
     const el = carouselRef.current;
     if (!el) return;
     checkScroll();
+    const timer = setTimeout(checkScroll, 100);
     window.addEventListener("resize", checkScroll);
-    return () => window.removeEventListener("resize", checkScroll);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", checkScroll);
+    };
   }, [featuredMedia.length]);
 
   const handleScroll = (direction: "left" | "right") => {
@@ -159,7 +169,7 @@ export function SpeakingPage() {
 
             {/* Slide Counter */}
             <div className="text-xs font-mono text-[#66717D] shrink-0">
-              <span className="text-[#C9A46C] font-semibold">0{activeSlide + 1}</span> / 0{featuredMedia.length}
+              <span className="text-[#C9A46C] font-semibold">0{activeSlide + 1}</span> / 0{totalSlides}
             </div>
           </div>
 
@@ -382,15 +392,20 @@ export function SpeakingPage() {
 
           {/* Carousel Pagination Dots */}
           <div className="flex items-center justify-center gap-2 mt-8">
-            {featuredMedia.map((_, dotIdx) => (
+            {Array.from({ length: totalSlides }).map((_, dotIdx) => (
               <button
                 key={dotIdx}
                 type="button"
                 onClick={() => {
                   if (!carouselRef.current) return;
-                  const { clientWidth } = carouselRef.current;
-                  const cardStep = clientWidth >= 768 ? (clientWidth - 32) / 2 + 32 : clientWidth;
-                  carouselRef.current.scrollTo({ left: dotIdx * cardStep, behavior: "smooth" });
+                  const { scrollWidth, clientWidth } = carouselRef.current;
+                  const isDesktop = clientWidth >= 768;
+                  const cardStep = isDesktop ? (clientWidth - 32) / 2 + 32 : clientWidth;
+                  const targetLeft =
+                    dotIdx === totalSlides - 1
+                      ? scrollWidth - clientWidth
+                      : dotIdx * cardStep;
+                  carouselRef.current.scrollTo({ left: targetLeft, behavior: "smooth" });
                 }}
                 aria-label={`Go to slide ${dotIdx + 1}`}
                 className={`h-1.5 rounded-full transition-all duration-300 ${

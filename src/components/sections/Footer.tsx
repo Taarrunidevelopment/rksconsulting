@@ -16,10 +16,10 @@ export function Footer() {
   ];
 
   return (
-    <footer className="relative bg-[#08090B] border-t border-[#242933] pt-20 pb-12 px-6 lg:px-12 overflow-hidden">
+    <footer className="relative bg-[#08090B] border-t border-[#242933] pt-8 pb-12 px-6 lg:px-12 overflow-hidden">
       <div className="max-w-7xl mx-auto">
         {/* Top Header Row with Logo on Left and Menu List on the Right Side */}
-        <div className="border-b border-[#242933] pb-10 mb-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+        <div className="border-b border-[#242933] pb-8 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div>
             <Link to="/" className="inline-flex items-center group" aria-label="RKS Consulting">
               <RKSLogo

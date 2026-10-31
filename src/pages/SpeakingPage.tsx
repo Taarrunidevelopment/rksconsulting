@@ -215,7 +215,7 @@ export function SpeakingPage() {
                             src={media.thumbnailUrl}
                             alt={media.title}
                             referrerPolicy="no-referrer"
-                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
+                            className={`w-full h-full ${media.thumbnailFit === "contain" ? "object-contain" : "object-cover"} ${media.thumbnailPosition || "object-center"} group-hover:scale-105 transition-transform duration-500 ease-out`}
                           />
                           {/* Gradient overlay for depth */}
                           <div className="absolute inset-0 bg-gradient-to-t from-[#111317] via-black/35 to-transparent opacity-85 group-hover:opacity-65 transition-opacity" />
@@ -257,15 +257,15 @@ export function SpeakingPage() {
                               )}
                             </div>
                             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#08090B]/85 backdrop-blur-md border border-[#242933] text-[11px] font-mono text-white/90 shadow-md">
-                              {isVideo ? (
-                                <>
-                                  <Youtube className="w-3.5 h-3.5 text-[#FF0000]" />
-                                  <span>YouTube</span>
-                                </>
-                              ) : isLinkedIn ? (
+                              {isLinkedIn ? (
                                 <>
                                   <span className="w-2 h-2 rounded-full bg-[#0A66C2]" />
                                   <span>LinkedIn</span>
+                                </>
+                              ) : isVideo ? (
+                                <>
+                                  <Youtube className="w-3.5 h-3.5 text-[#FF0000]" />
+                                  <span>YouTube</span>
                                 </>
                               ) : (
                                 <>

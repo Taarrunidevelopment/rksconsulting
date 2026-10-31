@@ -1,6 +1,7 @@
 import electronicaThumbnail from "../assets/images/electronica_interview_thumbnail.jpg";
 import efyThumbnail from "../assets/images/efy_interview_thumbnail.jpg";
 import pcimThumbnail from "../assets/images/RKS_PCIM.jpg";
+import semiconductorSummitThumbnail from "../assets/images/videoframe_0.png";
 
 export interface MediaItem {
   id: string;
@@ -12,6 +13,8 @@ export interface MediaItem {
   topics: string[];
   url?: string;
   thumbnailUrl?: string;
+  thumbnailPosition?: string;
+  thumbnailFit?: "cover" | "contain";
   speakers?: string;
   featuredExpert?: string;
   moderatedBy?: string;
@@ -21,6 +24,25 @@ export interface MediaItem {
 }
 
 export const MEDIA_ITEMS: MediaItem[] = [
+  {
+    id: "media-semiconductor-summit-2026",
+    title: "India's Advanced Packaging Opportunity in a Resilient Semiconductor Supply Chain",
+    source: "The Hindu",
+    format: "Video Interview",
+    year: "2026",
+    thumbnailUrl: semiconductorSummitThumbnail,
+    thumbnailFit: "contain",
+    featuredExpert: "Sharat Kaul, iNEMI",
+    summary: "Speaking at Semiconductor Summit 2026, Sharat Kaul highlighted the importance of resilient semiconductor supply chains and identified advanced packaging as India's biggest opportunity in the global chip industry. He explained how India's strengths in engineering, software, and semiconductor design can help the country leapfrog into the next phase of semiconductor innovation.",
+    topics: ["Advanced Packaging", "Supply Chain Resilience", "Semiconductor Design", "India Ecosystem"],
+    url: "https://www.linkedin.com/posts/semiconductor-semiconductorsummit2026-ugcPost-7520902497016672256-2gSg/?utm_source=share&utm_medium=member_android&rcm=ACoAAAZU2dcBiwIPql4ahMlBYUW49n84uo5WyXo",
+    readTime: "Semiconductor Summit 2026",
+    keyTakeaways: [
+      "Building resilient semiconductor supply chains",
+      "Advanced packaging as India's strongest global chip-industry opportunity",
+      "Leveraging engineering, software, and design talent to accelerate innovation"
+    ]
+  },
   {
     id: "media-pcim-roundtable",
     title: "Policy Meets Power: A Historic Alignment for India’s Semiconductor Future",

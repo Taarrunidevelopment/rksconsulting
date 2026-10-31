@@ -8,7 +8,7 @@ export interface BookingFormData {
   message: string;
 }
 
-export const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'rksc.co.in@gmail.com';
+export const ADMIN_EMAIL = 'prasannahegde3377@gmail.com';
 
 export interface SendEmailResult {
   success: boolean;
@@ -39,7 +39,7 @@ async function sendViaEmailJS(data: BookingFormData): Promise<SendEmailResult> {
     const templateParams = {
       to_email: ADMIN_EMAIL,
       admin_email: ADMIN_EMAIL,
-      to_name: 'Sharat Kaul',
+      to_name: 'Prasanna Hegde',
       reply_to: data.email,
 
       name: data.name,
@@ -116,14 +116,15 @@ export async function sendBookingEmail(data: BookingFormData): Promise<SendEmail
     // If backend returned a specific error (e.g. missing password), log it
     if (result && !result.success) {
       console.warn('[Email Service] Backend Nodemailer reported:', result.message);
-      // Fallback to EmailJS if configured
+      // Fallback to EmailJS
       const emailJsResult = await sendViaEmailJS(data);
       if (emailJsResult.success) {
         return emailJsResult;
       }
+      // If EmailJS also fails, return the informative message
       return {
         success: false,
-        message: result.message || 'Unable to deliver message. Please try again or use direct email.'
+        message: `${result.message} (EmailJS fallback also reported: ${emailJsResult.message})`
       };
     }
   } catch (backendFetchErr) {

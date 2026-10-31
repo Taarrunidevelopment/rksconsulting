@@ -2,120 +2,16 @@ import express, { Request, Response } from 'express';
 import nodemailer from 'nodemailer';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import dns from 'dns/promises';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'rksc.co.in@gmail.com';
-const GMAIL_APP_PASSWORD = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '').replace(/["']/g, '');
-
-function createMailTransporter() {
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: ADMIN_EMAIL,
-      pass: GMAIL_APP_PASSWORD
-    },
-    tls: {
-      rejectUnauthorized: false
-    },
-    connectionTimeout: 20000,
-    greetingTimeout: 20000,
-    socketTimeout: 20000
-  });
-}
-
-async function sendMailWithRetry(mailOptions: nodemailer.SendMailOptions, maxRetries = 3) {
-  let lastError: any;
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const transporter = createMailTransporter();
-      return await transporter.sendMail(mailOptions);
-    } catch (err: any) {
-      lastError = err;
-      console.warn(`[Nodemailer Server] Send attempt ${attempt} failed (${err?.code || err?.message}). Retrying...`);
-      if (attempt < maxRetries) {
-        await new Promise((res) => setTimeout(res, 1200));
-      }
-    }
-  }
-  throw lastError;
-}
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'prasannahegde3377@gmail.com';
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD || '';
 
 app.use(cors());
 app.use(express.json());
-
-// List of well-known temporary/disposable/fake email providers
-const DISPOSABLE_EMAIL_DOMAINS = new Set([
-  'mailinator.com',
-  'tempmail.com',
-  '10minutemail.com',
-  'guerrillamail.com',
-  'sharklasers.com',
-  'throwawaymail.com',
-  'trashmail.com',
-  'yopmail.com',
-  'temp-mail.org',
-  'dispostable.com',
-  'fakeinbox.com',
-  'getairmail.com',
-  'burnermail.io',
-  'inboxkitten.com',
-  'maildrop.cc',
-  'crazymailing.com'
-]);
-
-const PLACEHOLDER_FAKE_EMAILS = new Set([
-  'test@test.com',
-  'test@gmail.com',
-  'fake@fake.com',
-  'asdf@asdf.com',
-  'abc@abc.com',
-  'admin@admin.com',
-  'no@no.com',
-  'user@user.com'
-]);
-
-/**
- * Validates that an email belongs to a real, existing domain that can receive mail (has valid DNS MX records)
- */
-async function isRealEmailDomain(email: string): Promise<{ valid: boolean; reason?: string }> {
-  const normalized = email.trim().toLowerCase();
-
-  if (PLACEHOLDER_FAKE_EMAILS.has(normalized)) {
-    return { valid: false, reason: 'Please enter your genuine executive email address.' };
-  }
-
-  const parts = normalized.split('@');
-  if (parts.length !== 2 || !parts[1]) {
-    return { valid: false, reason: 'Invalid email address format.' };
-  }
-
-  const domain = parts[1];
-
-  // 1. Block disposable burner domains
-  if (DISPOSABLE_EMAIL_DOMAINS.has(domain)) {
-    return { valid: false, reason: 'Disposable or temporary email addresses are not permitted.' };
-  }
-
-  // 2. Real-time DNS MX lookup to check if the domain actually exists and accepts emails
-  try {
-    const mxRecords = await dns.resolveMx(domain);
-    if (!mxRecords || mxRecords.length === 0) {
-      return { valid: false, reason: `The email domain "${domain}" has no mail exchange (MX) servers and cannot receive email.` };
-    }
-  } catch (err: any) {
-    if (err?.code === 'ENOTFOUND' || err?.code === 'ENODATA' || err?.code === 'SERVFAIL') {
-      return { valid: false, reason: `The domain "${domain}" does not exist or is not configured for email.` };
-    }
-    // Network / timeout during DNS lookup: don't block legitimate users if DNS is slow
-    console.warn(`[DNS MX Check] Warning for domain ${domain}:`, err?.message);
-  }
-
-  return { valid: true };
-}
 
 // Health check endpoint
 app.get('/api/health', (_req: Request, res: Response) => {
@@ -127,98 +23,14 @@ app.get('/api/health', (_req: Request, res: Response) => {
   });
 });
 
-// Nodemailer SMTP test & diagnostic endpoint
-app.get('/api/verify-email', async (_req: Request, res: Response): Promise<any> => {
-  if (!GMAIL_APP_PASSWORD) {
-    return res.status(400).json({
-      status: 'error',
-      message: 'GMAIL_APP_PASSWORD is not set in .env.'
-    });
-  }
-
-  try {
-    const transporter = createMailTransporter();
-    await transporter.verify();
-    return res.json({
-      status: 'ok',
-      message: `Nodemailer successfully authenticated with Gmail for ${ADMIN_EMAIL}!`
-    });
-  } catch (error: any) {
-    const isBadCredentials = error?.message?.includes('535') || error?.message?.includes('BadCredentials');
-    return res.status(500).json({
-      status: 'error',
-      message: error?.message || 'SMTP Authentication Failed',
-      isBadCredentials,
-      instruction: isBadCredentials
-        ? 'Google rejected your credentials (535 Bad Credentials). In Gmail, you cannot use your regular account password. You MUST generate a 16-character App Password at: https://myaccount.google.com/apppasswords and set GMAIL_APP_PASSWORD in .env.'
-        : undefined
-    });
-  }
-});
-
-// In-memory rate limiting: max 5 requests per 10 minutes per client IP
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
-const MAX_REQUESTS_PER_WINDOW = 5;
-
 // Contact / Booking form endpoint
 app.post('/api/contact', async (req: Request, res: Response): Promise<any> => {
-  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || '127.0.0.1';
+  const { name, organization, email, topic, message } = req.body || {};
 
-  // 1. Rate Limiting Check
-  const now = Date.now();
-  const clientRecord = rateLimitMap.get(clientIp);
-
-  if (clientRecord) {
-    if (now < clientRecord.resetTime) {
-      if (clientRecord.count >= MAX_REQUESTS_PER_WINDOW) {
-        return res.status(429).json({
-          success: false,
-          message: 'Too many requests from this address. Please wait a few minutes before submitting another inquiry.'
-        });
-      }
-      clientRecord.count += 1;
-    } else {
-      rateLimitMap.set(clientIp, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
-    }
-  } else {
-    rateLimitMap.set(clientIp, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
-  }
-
-  const { name, organization, email, topic, message, hp_website } = req.body || {};
-
-  // 2. Honeypot Check (Silently drop spam bot submissions)
-  if (hp_website && typeof hp_website === 'string' && hp_website.trim().length > 0) {
-    console.warn(`[Anti-Spam] Bot submission dropped via honeypot from IP: ${clientIp}`);
-    return res.json({
-      success: true,
-      message: 'Inquiry received.'
-    });
-  }
-
-  // 3. Basic Validation
   if (!name || !email || !message) {
     return res.status(400).json({
       success: false,
       message: 'Please provide full name, email, and message.'
-    });
-  }
-
-  // 4. Email Regex Format Check
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return res.status(400).json({
-      success: false,
-      message: 'Please provide a valid email address.'
-    });
-  }
-
-  // 5. Real Domain & DNS MX Check (Rejects fake domains and disposable emails)
-  const domainCheck = await isRealEmailDomain(email);
-  if (!domainCheck.valid) {
-    return res.status(400).json({
-      success: false,
-      message: domainCheck.reason || 'Please provide a genuine, active professional email address.'
     });
   }
 
@@ -228,15 +40,24 @@ app.post('/api/contact', async (req: Request, res: Response): Promise<any> => {
     return res.status(503).json({
       success: false,
       isConfigMissing: true,
-      message: 'GMAIL_APP_PASSWORD is not configured in .env. Please create a 16-character Google App Password in your Google Account security settings (https://myaccount.google.com/apppasswords).'
+      message: 'GMAIL_APP_PASSWORD is not configured in .env. Please create a 16-character Google App Password in your Google Account security settings.'
     });
   }
 
   try {
+    // Create Nodemailer Transporter using Gmail service
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: ADMIN_EMAIL,
+        pass: GMAIL_APP_PASSWORD
+      }
+    });
+
     const formattedMessage = (message || '').replace(/\n/g, '<br/>');
     const submissionTime = new Date().toLocaleString();
 
-    // 1. Email to Admin (rksc.co.in@gmail.com)
+    // 1. Email to Admin (prasannahegde3377@gmail.com)
     const adminMailOptions = {
       from: `"RKS Advisory Desk" <${ADMIN_EMAIL}>`,
       to: ADMIN_EMAIL,
@@ -284,12 +105,12 @@ app.post('/api/contact', async (req: Request, res: Response): Promise<any> => {
       `
     };
 
-    await sendMailWithRetry(adminMailOptions, 3);
+    await transporter.sendMail(adminMailOptions);
 
     // 2. Automated Confirmation Email to the Client / User
     try {
       const clientMailOptions = {
-        from: `"Sharat Kaul | RKS Consulting" <${ADMIN_EMAIL}>`,
+        from: `"Prasanna Hegde | RKS Consulting" <${ADMIN_EMAIL}>`,
         to: email,
         subject: `Dialogue Initiated: Consultation Inquiry Received — RKS Consulting`,
         html: `
@@ -318,16 +139,15 @@ app.post('/api/contact', async (req: Request, res: Response): Promise<any> => {
             </p>
 
             <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #242933; font-size: 12px; color: #66717d; line-height: 1.5;">
-              <strong style="color: #fafaf8;">Sharat Kaul</strong><br/>
-              Semiconductor Technology Leader & Advanced Packaging Strategist<br/>
-              RKS Consulting<br/>
+              <strong style="color: #fafaf8;">Prasanna Hegde</strong><br/>
+              Technology Strategy & Semiconductor Advisory<br/>
               <a href="mailto:${ADMIN_EMAIL}" style="color: #c9a46c; text-decoration: none;">${ADMIN_EMAIL}</a>
             </div>
           </div>
         `
       };
 
-      await sendMailWithRetry(clientMailOptions, 2);
+      await transporter.sendMail(clientMailOptions);
     } catch (clientMailErr) {
       // Non-fatal: logged if client email bounced or failed
       console.warn('[Nodemailer Server] Client confirmation email warning:', clientMailErr);
@@ -347,24 +167,7 @@ app.post('/api/contact', async (req: Request, res: Response): Promise<any> => {
   }
 });
 
-app.listen(PORT, async () => {
+app.listen(PORT, () => {
   console.log(`[Backend Server] Nodemailer API listening on http://localhost:${PORT}`);
   console.log(`[Backend Server] Admin recipient: ${ADMIN_EMAIL}`);
-
-  if (!GMAIL_APP_PASSWORD) {
-    console.warn('[Nodemailer Server] Warning: GMAIL_APP_PASSWORD is not set in .env.');
-  } else {
-    try {
-      const testTransporter = createMailTransporter();
-      await testTransporter.verify();
-      console.log(`[Nodemailer Server] SUCCESS: Gmail SMTP credentials verified for ${ADMIN_EMAIL}! Ready to dispatch emails.`);
-    } catch (err: any) {
-      console.error(`[Nodemailer Server] SMTP Verification Warning:`, err?.message);
-      if (err?.message?.includes('535') || err?.message?.includes('BadCredentials')) {
-        console.error(`[Nodemailer Server] -> Google rejected the credentials (535 Bad Credentials).`);
-        console.error(`[Nodemailer Server] -> IMPORTANT: You MUST generate a 16-character Google App Password (not your standard Gmail account password).`);
-        console.error(`[Nodemailer Server] -> Generate it here: https://myaccount.google.com/apppasswords`);
-      }
-    }
-  }
 });

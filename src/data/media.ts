@@ -2,6 +2,7 @@ import electronicaThumbnail from "../assets/images/electronica_interview_thumbna
 import efyThumbnail from "../assets/images/efy_interview_thumbnail.jpg";
 import pcimThumbnail from "../assets/images/RKS_PCIM.jpg";
 import semiconductorSummitThumbnail from "../assets/images/videoframe_0.png";
+import isigPanelThumbnail from "../assets/images/isig_advanced_packaging_panel.jpg";
 
 export interface MediaItem {
   id: string;
@@ -24,6 +25,24 @@ export interface MediaItem {
 }
 
 export const MEDIA_ITEMS: MediaItem[] = [
+  {
+    id: "media-isig-advanced-packaging-panel-2026",
+    title: "Strengthening India's Advanced Semiconductor Packaging Ecosystem",
+    source: "International Semiconductor Industry Group (ISIG)",
+    format: "Leadership Roundtable",
+    year: "2026",
+    thumbnailUrl: isigPanelThumbnail,
+    moderatedBy: "Sharat Kaul, Consultant, India Representative at iNEMI",
+    summary: "A panel of seven industry leaders convened under ISIG to explore India's advanced semiconductor packaging opportunities, focusing on innovation, OSAT capabilities, infrastructure, research, and industry collaboration. The discussion emphasized building a globally competitive semiconductor industry by fostering innovation, knowledge sharing, and stronger collaboration between industry, academia, and research institutions.",
+    topics: ["Advanced Packaging", "OSAT", "Semiconductor Manufacturing", "Industry Leadership", "India"],
+    url: "https://www.linkedin.com/posts/internationalsemiconductorindustrygroup_isigindia2026-theisig-semiconductorleadership-activity-7524487428435554304-hMAe?utm_source=share&utm_medium=member_android&rcm=ACoAAAADjEUBqf1U_uIcbPRWWCI35cvPHF96ZUA",
+    readTime: "Industry Leadership Panel",
+    keyTakeaways: [
+      "Advanced Packaging Innovation",
+      "OSAT & Manufacturing Capabilities",
+      "Infrastructure & Industry Collaboration"
+    ]
+  },
   {
     id: "media-semiconductor-summit-2026",
     title: "India's Advanced Packaging Opportunity in a Resilient Semiconductor Supply Chain",
